@@ -21,7 +21,7 @@ class ModelConverter(private val context: Context) {
     
     init {
         if (!Python.isStarted()) {
-            AndroidPlatform.start(context)
+            Python.start(AndroidPlatform(context))
         }
     }
     
