@@ -88,11 +88,6 @@ class OnnxInference(private val context: Context) {
                 // Cleanup
                 inputTensor.close()
                 outputs.close()
-                
-                // Stop if we generate a natural end (simplified)
-                if (nextChar == "." || nextChar == "!" || nextChar == "?") {
-                    if (Random.nextFloat() < 0.3f) break
-                }
             }
             
             generatedText.toString()
