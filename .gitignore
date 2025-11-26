@@ -1,0 +1,35 @@
+# Android
+*.iml
+.gradle
+/local.properties
+/.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+*.apk
+*.ap_
+*.aab
+
+# Gradle
+.gradle/
+build/
+gradle-app.setting
+!gradle-wrapper.jar
+
+# Chaquopy
+.chaquopy/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# ONNX models (too large for git)
+*.onnx
+*.pt
+
+# Local configuration
+local.properties
