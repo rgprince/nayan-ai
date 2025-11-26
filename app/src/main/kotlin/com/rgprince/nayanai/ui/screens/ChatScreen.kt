@@ -269,7 +269,7 @@ fun TypingDot(delay: Int) {
             .size(8.dp)
             .background(
                 MaterialTheme.colorScheme.onSurfaceVariant,
-                shape = RoundedCornerShape(50%)
+                shape = androidx.compose.foundation.shape.CircleShape
             )
     )
 }
