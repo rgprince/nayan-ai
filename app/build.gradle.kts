@@ -28,7 +28,7 @@ android {
         defaultConfig {
             version = "3.8"
             pip {
-                install("torch==2.0.1")
+                install("torch==1.8.1")
                 install("numpy==1.24.3")
             }
         }
