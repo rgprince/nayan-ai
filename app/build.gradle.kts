@@ -22,8 +22,10 @@ android {
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
         }
-
-        python {
+    }
+    
+    chaquopy {
+        defaultConfig {
             version = "3.8"
             pip {
                 install("torch==2.0.1")
