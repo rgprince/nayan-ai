@@ -29,7 +29,7 @@ android {
             version = "3.8"
             pip {
                 install("torch==1.8.1")
-                install("numpy==1.24.3")
+                install("numpy==1.19.3")
             }
         }
     }
