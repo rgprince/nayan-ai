@@ -27,37 +27,35 @@ class ModelConverter(private val context: Context) {
     fun convertModel(inputPath: String): Flow<ConversionState> = flow {
         emit(ConversionState.Converting("Initializing Python environment..."))
         
-        withContext(Dispatchers.IO) {
-            try {
-                val python = Python.getInstance()
-                val converter = python.getModule("converter")
-                
-                emit(ConversionState.Converting("Loading PyTorch model..."))
-                
-                // Generate output path
-                val inputFile = File(inputPath)
-                val outputPath = inputFile.parent + "/" + inputFile.nameWithoutExtension + ".onnx"
-                
-                emit(ConversionState.Converting("Converting to ONNX format..."))
-                
-                // Call Python conversion function
-                val result = converter.callAttr("convert_to_onnx", inputPath, outputPath)
-                
-                val success = result["success"]?.toBoolean() ?: false
-                val message = result["message"]?.toString() ?: "Unknown error"
-                
-                if (success) {
-                    val sizeMb = result["model_size_mb"]?.toDouble() ?: 0.0
-                    emit(ConversionState.Success(outputPath, sizeMb))
-                } else {
-                    emit(ConversionState.Error(message))
-                }
-                
-            } catch (e: Exception) {
-                emit(ConversionState.Error("Conversion failed: ${e.message}"))
+        try {
+            val python = Python.getInstance()
+            val converter = python.getModule("converter")
+            
+            emit(ConversionState.Converting("Loading PyTorch model..."))
+            
+            // Generate output path
+            val inputFile = File(inputPath)
+            val outputPath = inputFile.parent + "/" + inputFile.nameWithoutExtension + ".onnx"
+            
+            emit(ConversionState.Converting("Converting to ONNX format..."))
+            
+            // Call Python conversion function
+            val result = converter.callAttr("convert_to_onnx", inputPath, outputPath)
+            
+            val success = result["success"]?.toBoolean() ?: false
+            val message = result["message"]?.toString() ?: "Unknown error"
+            
+            if (success) {
+                val sizeMb = result["model_size_mb"]?.toDouble() ?: 0.0
+                emit(ConversionState.Success(outputPath, sizeMb))
+            } else {
+                emit(ConversionState.Error(message))
             }
+            
+        } catch (e: Exception) {
+            emit(ConversionState.Error("Conversion failed: ${e.message}"))
         }
-    }
+    }.flowOn(Dispatchers.IO)
     
     suspend fun getModelInfo(onnxPath: String): Map<String, Any>? = withContext(Dispatchers.IO) {
         try {
