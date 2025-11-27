@@ -126,55 +126,99 @@ def convert_to_onnx(input_path: str, output_path: str) -> Dict[str, Any]:
         Dictionary with status and message
     """
     try:
-        # Validate input file
+        # Step 1: Validate input file
         if not os.path.exists(input_path):
             return {
                 "success": False,
                 "message": f"Input file not found: {input_path}"
             }
         
-        # Load the model
-        config = GPT2Config()
-        model = GPT(config)
+        # Step 2: Load the model architecture
+        try:
+            config = GPT2Config()
+            model = GPT(config)
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"Failed to create model architecture: {str(e)}"
+            }
         
-        # Load state dict
-        checkpoint = torch.load(input_path, map_location='cpu')
+        # Step 3: Load checkpoint
+        try:
+            checkpoint = torch.load(input_path, map_location='cpu')
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"Failed to load checkpoint file: {str(e)}"
+            }
         
-        # Handle different checkpoint formats
-        if isinstance(checkpoint, dict):
-            if 'model' in checkpoint:
-                state_dict = checkpoint['model']
-            elif 'state_dict' in checkpoint:
-                state_dict = checkpoint['state_dict']
+        # Step 4: Extract state dict
+        try:
+            if isinstance(checkpoint, dict):
+                if 'model' in checkpoint:
+                    state_dict = checkpoint['model']
+                elif 'state_dict' in checkpoint:
+                    state_dict = checkpoint['state_dict']
+                else:
+                    state_dict = checkpoint
             else:
                 state_dict = checkpoint
-        else:
-            state_dict = checkpoint
+            
+            # Remove _orig_mod prefix if present
+            state_dict = remove_orig_mod_prefix(state_dict)
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"Failed to extract state dict: {str(e)}"
+            }
         
-        # Remove _orig_mod prefix if present
-        state_dict = remove_orig_mod_prefix(state_dict)
+        # Step 5: Load weights
+        try:
+            missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
+            model.eval()
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"Failed to load model weights: {str(e)}"
+            }
         
-        # Load state dict into model
-        model.load_state_dict(state_dict, strict=False)
-        model.eval()
+        # Step 6: Create dummy input
+        try:
+            dummy_input = torch.randint(0, config.vocab_size, (1, config.block_size), dtype=torch.long)
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"Failed to create dummy input: {str(e)}"
+            }
         
-        # Create dummy input
-        dummy_input = torch.randint(0, config.vocab_size, (1, config.block_size), dtype=torch.long)
+        # Step 7: Export to ONNX
+        try:
+            torch.onnx.export(
+                model,
+                dummy_input,
+                output_path,
+                input_names=['input_ids'],
+                output_names=['logits'],
+                dynamic_axes={
+                    'input_ids': {0: 'batch_size', 1: 'sequence'},
+                    'logits': {0: 'batch_size', 1: 'sequence'}
+                },
+                opset_version=13,  # Changed from 14 to 13 for better compatibility
+                do_constant_folding=True,
+                verbose=False
+            )
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"ONNX export failed: {str(e)}"
+            }
         
-        # Export to ONNX
-        torch.onnx.export(
-            model,
-            dummy_input,
-            output_path,
-            input_names=['input_ids'],
-            output_names=['logits'],
-            dynamic_axes={
-                'input_ids': {0: 'batch_size', 1: 'sequence'},
-                'logits': {0: 'batch_size', 1: 'sequence'}
-            },
-            opset_version=14,
-            do_constant_folding=True,
-        )
+        # Step 8: Verify output file
+        if not os.path.exists(output_path):
+            return {
+                "success": False,
+                "message": "ONNX file was not created"
+            }
         
         return {
             "success": True,
@@ -185,8 +229,9 @@ def convert_to_onnx(input_path: str, output_path: str) -> Dict[str, Any]:
     except Exception as e:
         return {
             "success": False,
-            "message": f"Conversion failed: {str(e)}"
+            "message": f"Unexpected error: {str(e)}"
         }
+
 
 
 def get_model_info(onnx_path: str) -> Dict[str, Any]:
