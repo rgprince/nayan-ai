@@ -42,10 +42,10 @@ fun ModelManagerScreen(
     ) { uri: Uri? ->
         uri?.let {
             val file = getRealPathFromUri(context, it)
-            file?.let { path ->
-                selectedModelPath = path
+            if (file != null) {
+                selectedModelPath = file
                 scope.launch {
-                    converter.convertModel(path).collect { state ->
+                    converter.convertModel(file).collect { state ->
                         conversionState = state
                         if (state is ConversionState.Success) {
                             // Create a new chat session
@@ -54,6 +54,9 @@ fun ModelManagerScreen(
                         }
                     }
                 }
+            } else {
+                // File selection failed
+                conversionState = ConversionState.Error("Failed to access file. Please try again or check file permissions.")
             }
         }
     }
@@ -245,15 +248,32 @@ fun ConversionError(message: String, onRetry: () -> Unit) {
 
 private fun getRealPathFromUri(context: android.content.Context, uri: Uri): String? {
     return try {
+        android.util.Log.d("ModelManager", "Attempting to access file from URI: $uri")
         val input = context.contentResolver.openInputStream(uri)
+        if (input == null) {
+            android.util.Log.e("ModelManager", "Failed to open input stream for URI: $uri")
+            return null
+        }
+        
         val file = File(context.cacheDir, "temp_model.pt")
-        input?.use { inputStream ->
+        android.util.Log.d("ModelManager", "Copying file to: ${file.absolutePath}")
+        
+        input.use { inputStream ->
             file.outputStream().use { outputStream ->
-                inputStream.copyTo(outputStream)
+                val bytesCopied = inputStream.copyTo(outputStream)
+                android.util.Log.d("ModelManager", "Copied $bytesCopied bytes")
             }
         }
-        file.absolutePath
+        
+        if (file.exists()) {
+            android.util.Log.d("ModelManager", "File successfully copied. Size: ${file.length()} bytes")
+            file.absolutePath
+        } else {
+            android.util.Log.e("ModelManager", "File not found after copy")
+            null
+        }
     } catch (e: Exception) {
+        android.util.Log.e("ModelManager", "Error accessing file", e)
         e.printStackTrace()
         null
     }
