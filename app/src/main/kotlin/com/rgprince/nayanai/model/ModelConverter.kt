@@ -54,7 +54,18 @@ class ModelConverter(private val context: Context) {
             }
             
         } catch (e: Exception) {
-            emit(ConversionState.Error("Conversion failed: ${e.message}"))
+            val errorMsg = buildString {
+                append("Conversion failed: ")
+                append(e.javaClass.simpleName)
+                append(": ")
+                append(e.message ?: "No error message")
+                e.cause?.let { cause ->
+                    append("\nCaused by: ")
+                    append(cause.message)
+                }
+            }
+            android.util.Log.e("ModelConverter", errorMsg, e)
+            emit(ConversionState.Error(errorMsg))
         }
     }.flowOn(Dispatchers.IO)
     
